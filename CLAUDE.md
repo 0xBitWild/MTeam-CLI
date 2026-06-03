@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 🤖 **Keep-alive automation** — daily multi-account browser login (M-Team deletes accounts after 40 days of inactivity). Login is fully automatic via TOTP; there is **no QR / no human-in-the-loop**.
 - 🧠 **AI-friendly data source** — profile/stats, torrent search/detail, seeding/leeching + H&R, messages/notices, emitted as clean structured data (`table`/`json`/`yaml`/`csv`/`md`/`plain`) for piping to `jq` / feeding an LLM / wrapping as an Agent tool.
 
-It was refactored from a single-file `MT-AutoCheckIn.py` script (now removed); the login logic was ported faithfully and verified live.
+It was refactored from a single-file script (now removed); the login logic was ported faithfully and verified live.
 
 ## Commands
 

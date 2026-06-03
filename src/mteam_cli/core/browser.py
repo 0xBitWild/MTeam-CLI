@@ -3,7 +3,7 @@
 Trimmed from the WeRead BrowserSession: no state-machine detection and no
 storage_state injection — M-Team stores its auth token in localStorage, which
 is loaded/saved explicitly by ``automation.localstorage.LocalStorageManager``
-(the approach proven in the legacy MT-AutoCheckIn script).
+(the approach proven in the legacy script).
 """
 
 from __future__ import annotations

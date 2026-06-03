@@ -1,6 +1,6 @@
 """Daily-trigger scheduler — one independent job per account.
 
-Mirrors the legacy MT-AutoCheckIn behavior: each account gets its own random
+Each account gets its own random
 HH:MM inside the window, plus extra in-tick jitter so request bursts differ
 even when two accounts land on the same minute. Exceptions inside a tick are
 logged but never crash the loop; a heartbeat logs liveness for ``docker logs``.

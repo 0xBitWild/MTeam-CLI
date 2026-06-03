@@ -1,6 +1,6 @@
 """LocalStorage manager — load/save a page's localStorage to a JSON file.
 
-Ported verbatim from the legacy MT-AutoCheckIn ``LocalStorageManager``. M-Team's
+Ported verbatim from the original ``LocalStorageManager``. M-Team's
 SPA keeps its auth token in localStorage, so persisting/restoring it is what
 lets subsequent logins skip the password+TOTP step.
 """

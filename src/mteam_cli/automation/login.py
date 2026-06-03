@@ -1,6 +1,6 @@
 """Keep-alive browser login for one account.
 
-Preserves the proven logic from the legacy MT-AutoCheckIn:
+Preserves the proven login logic from the original script:
   1. Try restoring the per-account localStorage snapshot (skips 2FA).
   2. Fall back to username + password + TOTP, handling the three observed
      2FA variants (direct redirect / #otp-code input / "確認" button).

@@ -34,8 +34,8 @@ class SMTPNotifier:
 
     def _sync_send(self, n: Notification) -> None:
         msg = MIMEText(n.body, _charset="utf-8")
-        msg["Subject"] = f"[MT-AutoCheckIn] {n.title}"
-        msg["From"] = f"MT-AutoCheckIn <{self.sender}>"
+        msg["Subject"] = f"[M-Team] {n.title}"
+        msg["From"] = f"MTeam-CLI <{self.sender}>"
         msg["To"] = ", ".join(self.recipients)
 
         client_cls = smtplib.SMTP_SSL if self.port == 465 else smtplib.SMTP

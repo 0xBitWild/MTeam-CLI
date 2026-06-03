@@ -1,6 +1,6 @@
 """Feishu (Lark) bot webhook notifier — text only, pure urllib.
 
-Ported from the legacy MT-AutoCheckIn ``send_feishu``: posts to the bot v2
+Posts to the Feishu bot v2 webhook with the configured token:
 webhook with the configured token.
 """
 
