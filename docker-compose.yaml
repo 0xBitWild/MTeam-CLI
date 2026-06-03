@@ -1,49 +1,57 @@
 services:
 
-  mt_autocheckin:
-    image: bitwild/mt-autocheckin:latest
-    container_name: mt-autocheckin
+  mteam-cli:
+    image: bitwild/mteam-cli:${MTEAM_IMAGE_TAG:-latest}
+    container_name: mteam-cli
     build:
       context: .
       dockerfile: ./Dockerfile
-
     restart: always
-    volumes:
-      - /etc/timezone:/etc/timezone
-      - /etc/hosts:/etc/hosts
     environment:
       - TZ=Asia/Shanghai
+      - MTEAM_HEADLESS=true
 
-      # M-Team 账号信息 (示例：配置两个账户)
+      # ── 多账户：凭证 + 通知，全部按账户独立（_<n> 后缀，无全局通知）──
+      # 保活需要 USERNAME/PASSWORD/TOTP_SECRET；数据查询需要 API_KEY。
       - MTEAM_USERNAME_1=user1
       - MTEAM_PASSWORD_1=pass1
       - MTEAM_TOTP_SECRET_1=totp1
-      - NOTIFY_EMAIL_1=user1@example.com
+      - MTEAM_API_KEY_1=apikey1
+      # 账户 1 的通知（各渠道 opt-in）
+      - NOTIFY_TELEGRAM_TOKEN_1=
+      - NOTIFY_TELEGRAM_CHAT_ID_1=
+      - NOTIFY_FEISHU_TOKEN_1=
+      - NOTIFY_SMTP_HOST_1=
+      - NOTIFY_SMTP_PORT_1=465
+      - NOTIFY_SMTP_USER_1=
+      - NOTIFY_SMTP_PASSWORD_1=
+      - NOTIFY_SMTP_FROM_1=
+      - NOTIFY_SMTP_TO_1=
+      - NOTIFY_SMTP_USE_TLS_1=true
 
-      - MTEAM_USERNAME_2=user2
-      - MTEAM_PASSWORD_2=pass2
-      - MTEAM_TOTP_SECRET_2=totp2
-      - NOTIFY_EMAIL_2=user2@example.com
+      # 账户 2（示例）
+      # - MTEAM_USERNAME_2=user2
+      # - MTEAM_PASSWORD_2=pass2
+      # - MTEAM_TOTP_SECRET_2=totp2
+      # - MTEAM_API_KEY_2=apikey2
+      # - NOTIFY_TELEGRAM_TOKEN_2=
+      # - NOTIFY_TELEGRAM_CHAT_ID_2=
 
-      # SMTP 邮件通知
-      - SMTP_HOST=your_smtp_host
-      - SMTP_PORT=your_smtp_port
-      - SMTP_USERNAME=your_smtp_username
-      - SMTP_PASSWORD=your_smtp_password
+      # ── 定时调度（全局）──────────────────────────
+      - MTEAM_SCHEDULE_WINDOW=09:00-11:00
+      - MTEAM_SCHEDULE_PRE_DELAY_RANGE=10-300
+      - MTEAM_SCHEDULE_HEARTBEAT_HOURS=1
 
-      # Telegram 通知
-      - TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-      - TELEGRAM_CHAT_ID=your_telegram_chat_id
+    volumes:
+      # 持久化每账户登录态（localStorage 快照）+ 日志。
+      - mteam-data:/app/data
 
-      # 飞书 通知
-      - FEISHU_BOT_TOKEN=your_feishu_bot_token
-
-      # 通知类型
-      - NOTIFY_TYPE=smtp # smtp, telegram, feishu, none
-
-    command:   ["sh", "-c", "python MT-AutoCheckIn.py"]
+    command: ["mteam-cli", "schedule"]
     healthcheck:
-      test: [ "CMD", "pgrep", "-f", "python MT-AutoCheckIn.py" ]
+      test: ["CMD", "pgrep", "-f", "mteam-cli schedule"]
       interval: 30s
       timeout: 10s
       retries: 3
+
+volumes:
+  mteam-data:

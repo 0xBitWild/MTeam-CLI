@@ -1,36 +1,29 @@
-# 基础镜像
-FROM python:3.14-bookworm AS base
+# Playwright-python image ships Chromium + system fonts + zh-CN locale.
+# Pin the tag to match the playwright pip version range in pyproject.toml.
+FROM mcr.microsoft.com/playwright/python:v1.60.0-noble
 
-# 更新apt包管理器并安装必要的依赖
-RUN apt update -y && \
-    apt install -y --no-install-recommends bash build-essential libffi-dev libssl-dev && \
-    apt clean all && \
-    rm -rf /var/lib/apt/lists/*
+# TZ must be set so the `schedule` library interprets HH:MM as Asia/Shanghai,
+# not UTC.
+ENV TZ=Asia/Shanghai \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1
 
-# 设置工作目录
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 WORKDIR /app
 
-# 复制requirements.txt到镜像中
-COPY requirements.txt .
+# Install python deps first to leverage layer caching.
+COPY pyproject.toml README.md ./
+COPY src ./src
+RUN pip install -e .
 
-# 安装Python依赖
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt && \
-    # 清理pip缓存以减少镜像大小
-    rm -rf /root/.cache/pip
+# Persistent state lives here — mount as a named volume (compose) or PVC (k8s)
+# so the per-account localStorage snapshots and logs survive container rebuilds.
+RUN mkdir -p /app/data/auth /app/data/logs /app/data/artifacts \
+    && chown -R pwuser:pwuser /app
 
-RUN playwright install chromium && \
-    playwright install-deps
+USER pwuser
 
-FROM base
-
-LABEL maintainer="0xBitwild"
-
-# 设置工作目录
-WORKDIR /app
-
-# 复制目录到镜像中
-COPY . .
-
-# 设置入口点
-CMD ["sh", "-c", "python MT-AutoCheckIn.py"]
+# Default: the long-running daily scheduler (all accounts).
+CMD ["mteam-cli", "schedule"]
