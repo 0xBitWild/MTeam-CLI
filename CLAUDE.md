@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 🤖 **Keep-alive automation** — daily multi-account browser login (M-Team deletes accounts after 40 days of inactivity). Login is fully automatic via TOTP; there is **no QR / no human-in-the-loop**.
 - 🧠 **AI-friendly data source** — profile/stats, torrent search/detail, seeding/leeching + H&R, messages/notices, emitted as clean structured data (`table`/`json`/`yaml`/`csv`/`md`/`plain`) for piping to `jq` / feeding an LLM / wrapping as an Agent tool.
 
-It was refactored from the single-file `MT-AutoCheckIn.py` (kept at the repo root as the **legacy reference** for the proven login logic; the package is authoritative).
+It was refactored from a single-file `MT-AutoCheckIn.py` script (now removed); the login logic was ported faithfully and verified live.
 
 ## Commands
 
@@ -68,7 +68,7 @@ src/mteam_cli/
   └── cli/          argparse dispatcher + per-command modules + emit/table/account helpers
 ```
 
-**The two faces are strictly separated.** Data commands (`api/` + their command modules) never import Playwright — they take an account's `api_key` and call `api.api_post(...)` over urllib. Keep-alive commands (`automation/` + `core/browser.py`) own all the Playwright code. This keeps `doctor` and every data command usable where Chromium isn't installed.
+**The two faces are strictly separated.** Data commands (`api/` + their command modules) never import Playwright — they call `api.api_post(...)` over urllib, authed either by the account's `api_key` (most endpoints) or by the web-session JWT read from the localStorage snapshot (`hnr`/`messages`; see `api/session.py`). Keep-alive commands (`automation/` + `core/browser.py`) own all the Playwright code. This keeps `doctor` and every data command usable where Chromium isn't installed.
 
 ### `core/`
 - `config.py` — **`Account`** value object (`safe_name`, `storage_path`, `can_keepalive`, `can_query`) + **`Settings`** with `accounts: list[Account]`, `from_env()` (numbered parse), `resolve_account(name)` (None → first). This multi-account `Settings` is the biggest divergence from a single-tenant design.
@@ -77,8 +77,9 @@ src/mteam_cli/
 
 ### `api/` (data — pure HTTP)
 Verified against M-Team's OpenAPI spec (`https://test2.m-team.cc/api/swagger-ui/`, `/api/v3/api-docs`) + a live envelope probe.
-- `_internal.py` — **`api_post(path, *, api_key, base_url, params=None, body=None)`**: every endpoint is **POST** with `x-api-key`. `params` → query string (e.g. `/member/profile?uid=`, `/torrent/detail?id=`); `body` → JSON (e.g. `/torrent/search`). Unwraps the `{code, message, data}` envelope where **`code == 0` (int) is success**; raises `MTeamAuthError` on 401/403 or an auth-looking `message` (e.g. `key無效`), `MTeamAPIError` otherwise. All endpoint-specific details live here + in `public.py`.
-- `public.py` — thin per-endpoint wrappers + `get_own_uid` + `as_list`. Endpoint map: `profile` `/member/profile?uid` (omit uid → self), `search` body `/torrent/search` (`page`/`pageSize`/`keyword`/`mode`/`category`), `detail` `/torrent/detail?id`, `gen_dl_token` `/torrent/genDlToken?id`, `seeding` body `/member/getUserTorrentList` (`uid`+`type` SEEDING/LEECHING/COMPLETED), `hnr` `/member/getCrimeRecords?uid`, `messages` body `/msg/search`, `notices` `/system/news`. `uid`-requiring endpoints resolve the caller's own uid via `get_own_uid` (a no-uid `profile` call → `data.id`).
+- `_internal.py` — **`api_post(path, *, base_url, api_key=None, auth_token=None, did=None, visitorid=None, params=None, body=None, form=None)`**: every endpoint is **POST**. Auth is either `api_key` → `x-api-key`, or `auth_token` → `authorization` (the web-session JWT, with `did`/`visitorid`; api_key omitted). `params` → query string; `form` → urlencoded; `body` → JSON. Unwraps the `{code, message, data}` envelope where **`code == 0` (int) is success**; raises `MTeamAuthError` on 401/403 or an auth-looking `message` (`key無效`/`無許可權`/`Full authentication`), `MTeamAPIError` otherwise.
+- `public.py` — thin per-endpoint wrappers + `get_own_uid` + `as_list`. Endpoint map: `profile` `/member/profile?uid` (omit uid → self), `search` body `/torrent/search` (`pageNumber`/`pageSize`/`keyword`/`mode`), `detail` form `/torrent/detail` (`id`), `gen_dl_token` form `/torrent/genDlToken` (`id`), `seeding` body `/member/getUserTorrentList` (`userid`+`type` SEEDING/LEECHING/COMPLETED, `pageNumber`), `hnr` `/member/getCrimeRecords?uid` (**JWT**), `messages` body `/msg/search` (**JWT**), `notices` `/system/news`.
+- `session.py` — `load_session(storage_path) → WebSession`: reads the JWT from the localStorage snapshot's `auth` key (+ `did`/`visitorId`, + `uid` decoded from the JWT). `hnr`/`messages` use this because the API key is rejected (`無許可權` / `401`) on those endpoints; they error asking the user to run `login` first if no snapshot exists.
 - **Host**: default `api.m-team.cc` (the working `mcp-server-mteam` reference uses `.cc`; `api.m-team.io` is a mirror, override via `MTEAM_API_BASE_URL`). Both sit behind Cloudflare, which **bot-blocks datacenter IPs** (302 → google.com) — so data commands must run from a normal/residential network, not a cloud sandbox. The search shape (`pageNumber`, JSON) and detail/genDlToken (form `id`) are taken from that proven reference, so they match production; the OpenAPI test server used `page` and differs.
 - `humanize.py` — `naturalsize(binary=True)` / `ratio` / `num` formatting.
 

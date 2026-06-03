@@ -1,7 +1,8 @@
-"""Inbox / private messages (API key).
+"""Inbox / private messages.
 
-⚠ PROBE-VERIFY: columns are auto-derived from the response until the endpoint
-shape is confirmed.
+This endpoint rejects the API key (401 Full authentication required) — it needs
+the web session JWT. We reuse the token persisted by ``mteam-cli login``/``run``
+(localStorage snapshot). Run login first if there is no session yet.
 """
 
 from __future__ import annotations
@@ -9,16 +10,16 @@ from __future__ import annotations
 import argparse
 import logging
 
-from mteam_cli.api import MTeamAPIError, get_messages
+from mteam_cli.api import MTeamAPIError, get_messages, load_session
 from mteam_cli.api.public import as_list
-from mteam_cli.cli._account import add_account_arg, require_query, resolve_account_or_exit
+from mteam_cli.cli._account import add_account_arg, resolve_account_or_exit
 from mteam_cli.cli._emit import add_format_arg, add_raw_arg, auto_fields, emit_raw, emit_rows
 from mteam_cli.core.config import Settings
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:
     p = subparsers.add_parser(
-        "messages", help="站内信（收件箱）。注意：M-Team 该端点需完整登录会话，API key 通常不支持。"
+        "messages", help="站内信（收件箱）。需先 login 获取会话（API key 不支持）。"
     )
     p.add_argument("-n", "--limit", type=int, default=20, help="每页数量 (默认: 20)")
     p.add_argument("--page", type=int, default=1, help="页码 (默认: 1)")
@@ -33,11 +34,20 @@ async def handle(
     args: argparse.Namespace, settings: Settings, logger: logging.Logger
 ) -> int:
     account = resolve_account_or_exit(args, settings)
-    require_query(account)
+    session = load_session(account.storage_path(settings.auth_dir))
+    if session is None:
+        print(
+            f"该端点需要登录会话。请先运行 `mteam-cli login --account {account.username}`，"
+            "再执行本命令。"
+        )
+        return 1
+
     try:
         data = await get_messages(
-            account.api_key,
             base_url=settings.api_base_url,
+            auth_token=session.auth_token,
+            did=session.did,
+            visitorid=session.visitorid,
             box_id=args.box,
             page_number=args.page,
             page_size=args.limit,

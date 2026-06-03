@@ -20,6 +20,7 @@ from mteam_cli.api.public import (
     get_torrent_detail,
     search_torrents,
 )
+from mteam_cli.api.session import WebSession, load_session
 
 __all__ = [
     "MTeamAPIError",
@@ -34,4 +35,6 @@ __all__ = [
     "get_hnr",
     "get_messages",
     "get_notices",
+    "WebSession",
+    "load_session",
 ]

@@ -10,5 +10,3 @@ Quick orientation:
 - Source: `src/mteam_cli/` (`core/ api/ automation/ notify/ scheduler/ cli/`).
 - Install: `pip install -e .` then `playwright install chromium`.
 - Entry point: `mteam-cli` (= `python -m mteam_cli`).
-- `MT-AutoCheckIn.py` at the repo root is the **legacy reference** for the
-  proven login logic; the package supersedes it.

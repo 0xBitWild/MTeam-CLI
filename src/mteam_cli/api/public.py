@@ -97,29 +97,52 @@ async def get_peer_list(
     )
 
 
-async def get_hnr(api_key: str, uid: int | str, *, base_url: str) -> Any:
-    """Hit-and-run / crime records for a member (query param ``uid``)."""
+async def get_hnr(
+    uid: int | str,
+    *,
+    base_url: str,
+    auth_token: str,
+    did: str | None = None,
+    visitorid: str | None = None,
+) -> Any:
+    """Hit-and-run / crime records (query ``uid``). Requires the web session JWT
+    (the API key is rejected with 無許可權)."""
     return await api_post(
-        "/member/getCrimeRecords", api_key=api_key, base_url=base_url, params={"uid": uid}
+        "/member/getCrimeRecords",
+        base_url=base_url,
+        auth_token=auth_token,
+        did=did,
+        visitorid=visitorid,
+        params={"uid": uid},
     )
 
 
 async def get_messages(
-    api_key: str,
     *,
     base_url: str,
+    auth_token: str,
+    did: str | None = None,
+    visitorid: str | None = None,
     box_id: int | None = None,
     keyword: str = "",
     page_number: int = 1,
     page_size: int = 20,
 ) -> Any:
-    """Inbox / private messages (body MessageSearch). Production uses ``pageNumber``."""
+    """Inbox / private messages (body MessageSearch). Requires the web session
+    JWT (the API key returns 401 Full authentication required)."""
     body: dict[str, Any] = {"pageNumber": page_number, "pageSize": page_size}
     if box_id is not None:
         body["boxId"] = box_id
     if keyword:
         body["keyword"] = keyword
-    return await api_post("/msg/search", api_key=api_key, base_url=base_url, body=body)
+    return await api_post(
+        "/msg/search",
+        base_url=base_url,
+        auth_token=auth_token,
+        did=did,
+        visitorid=visitorid,
+        body=body,
+    )
 
 
 async def get_notices(api_key: str, *, base_url: str) -> Any:

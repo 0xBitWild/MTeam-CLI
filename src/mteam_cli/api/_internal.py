@@ -57,20 +57,29 @@ class MTeamAuthError(MTeamAPIError):
 async def api_post(
     path: str,
     *,
-    api_key: str,
     base_url: str,
+    api_key: str | None = None,
+    auth_token: str | None = None,
+    did: str | None = None,
+    visitorid: str | None = None,
     params: dict[str, Any] | None = None,
     body: dict[str, Any] | None = None,
     form: dict[str, Any] | None = None,
     timeout: int = 20,
 ) -> Any:
-    """POST ``{base_url}{path}`` with ``x-api-key`` and return the ``data`` field.
+    """POST ``{base_url}{path}`` and return the ``data`` field.
+
+    Auth (pick one):
+      * ``api_key``    → ``x-api-key`` header (most endpoints)
+      * ``auth_token`` → ``authorization`` header = the web session JWT, for
+        endpoints that require a full session (messages, crime records). When
+        present, ``did``/``visitorid`` are sent too (the SPA does), and the
+        API key is omitted.
 
     Body encoding (pick one to match the endpoint):
       * ``params`` → query string (``/member/profile?uid=``, ``/member/getCrimeRecords?uid=``)
       * ``form``   → ``application/x-www-form-urlencoded`` (``/torrent/detail``, ``/torrent/genDlToken``)
       * ``body``   → JSON (``/torrent/search``, ``/member/getUserTorrentList``)
-    ``params`` may combine with either body form.
 
     Raises ``MTeamAuthError`` on auth failure (HTTP 401/403 or an auth code /
     message), ``MTeamAPIError`` on any other non-success response.
@@ -82,10 +91,17 @@ async def api_post(
             url = f"{url}?{urlencode(clean)}"
 
     headers = {
-        "x-api-key": api_key,
         "User-Agent": MTEAM_UA,
         "Accept": "application/json",
     }
+    if auth_token:
+        headers["authorization"] = auth_token
+        if did:
+            headers["did"] = did
+        if visitorid:
+            headers["visitorid"] = visitorid
+    elif api_key:
+        headers["x-api-key"] = api_key
     if form is not None:
         data = urlencode(form).encode("utf-8")
         headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"

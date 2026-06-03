@@ -1,7 +1,8 @@
-"""Hit-and-run (H&R) / crime records for a member (API key).
+"""Hit-and-run (H&R) / crime records for a member.
 
-Endpoint: POST /member/getCrimeRecords?uid=. Resolves own uid first unless
---uid is given. Columns are auto-derived until the shape is curated.
+This endpoint rejects the API key (無許可權) — it needs the web session JWT.
+We reuse the token persisted by ``mteam-cli login``/``run`` (localStorage
+snapshot). Run login first if there is no session yet.
 """
 
 from __future__ import annotations
@@ -9,16 +10,16 @@ from __future__ import annotations
 import argparse
 import logging
 
-from mteam_cli.api import MTeamAPIError, get_hnr, get_own_uid
+from mteam_cli.api import MTeamAPIError, get_hnr, load_session
 from mteam_cli.api.public import as_list
-from mteam_cli.cli._account import add_account_arg, require_query, resolve_account_or_exit
+from mteam_cli.cli._account import add_account_arg, resolve_account_or_exit
 from mteam_cli.cli._emit import add_format_arg, add_raw_arg, auto_fields, emit_raw, emit_rows
 from mteam_cli.core.config import Settings
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:
     p = subparsers.add_parser(
-        "hnr", help="H&R（Hit and Run）记录。注意：可能需要会话/权限，API key 未必支持。"
+        "hnr", help="H&R（Hit and Run）记录。需先 login 获取会话（API key 不支持）。"
     )
     p.add_argument("--uid", default=None, help="查看指定用户（默认：自己）。")
     add_account_arg(p)
@@ -31,11 +32,27 @@ async def handle(
     args: argparse.Namespace, settings: Settings, logger: logging.Logger
 ) -> int:
     account = resolve_account_or_exit(args, settings)
-    require_query(account)
-    base = settings.api_base_url
+    session = load_session(account.storage_path(settings.auth_dir))
+    if session is None:
+        print(
+            f"该端点需要登录会话。请先运行 `mteam-cli login --account {account.username}`，"
+            "再执行本命令。"
+        )
+        return 1
+
+    uid = args.uid or session.uid
+    if not uid:
+        print("无法确定 uid（会话未携带，且未指定 --uid）。")
+        return 1
+
     try:
-        uid = args.uid or await get_own_uid(account.api_key, base_url=base)
-        data = await get_hnr(account.api_key, uid, base_url=base)
+        data = await get_hnr(
+            uid,
+            base_url=settings.api_base_url,
+            auth_token=session.auth_token,
+            did=session.did,
+            visitorid=session.visitorid,
+        )
     except MTeamAPIError as exc:
         print(f"错误: {exc}")
         return 1
