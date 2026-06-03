@@ -15,7 +15,7 @@ from mteam_cli.api import MTeamAPIError, get_own_uid, get_peer_list
 from mteam_cli.api import humanize as hz
 from mteam_cli.api.public import as_list
 from mteam_cli.cli._account import add_account_arg, require_query, resolve_account_or_exit
-from mteam_cli.cli._emit import Field, add_format_arg, emit_rows
+from mteam_cli.cli._emit import Field, add_format_arg, add_raw_arg, emit_raw, emit_rows
 from mteam_cli.core.config import Settings
 
 _FIELDS = [
@@ -37,6 +37,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     p.add_argument("--page", type=int, default=1, help="页码 (默认: 1)")
     add_account_arg(p)
     add_format_arg(p)
+    add_raw_arg(p)
     p.set_defaults(func=handle)
 
 
@@ -59,6 +60,10 @@ async def handle(
     except MTeamAPIError as exc:
         print(f"错误: {exc}")
         return 1
+
+    if args.raw:
+        emit_raw(data)
+        return 0
 
     rows = [_shape(it) for it in as_list(data)]
     if not rows:

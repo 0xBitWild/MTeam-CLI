@@ -12,7 +12,7 @@ import logging
 from mteam_cli.api import MTeamAPIError, get_messages
 from mteam_cli.api.public import as_list
 from mteam_cli.cli._account import add_account_arg, require_query, resolve_account_or_exit
-from mteam_cli.cli._emit import add_format_arg, auto_fields, emit_rows
+from mteam_cli.cli._emit import add_format_arg, add_raw_arg, auto_fields, emit_raw, emit_rows
 from mteam_cli.core.config import Settings
 
 
@@ -25,6 +25,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     p.add_argument("--box", type=int, default=None, help="信箱 ID（默认：全部）。")
     add_account_arg(p)
     add_format_arg(p)
+    add_raw_arg(p)
     p.set_defaults(func=handle)
 
 
@@ -44,6 +45,10 @@ async def handle(
     except MTeamAPIError as exc:
         print(f"错误: {exc}")
         return 1
+
+    if args.raw:
+        emit_raw(data)
+        return 0
 
     rows = as_list(data)
     if not rows:

@@ -158,3 +158,22 @@ def add_format_arg(parser: Any) -> None:
         choices=VALID_FORMATS,
         help=f"输出格式 (默认: {DEFAULT_FORMAT})",
     )
+
+
+def add_raw_arg(parser: Any) -> None:
+    """Inject ``--raw`` — dump the full, unprojected API ``data`` as JSON.
+
+    The curated columns are for humans; ``--raw`` gives downstream logic / LLMs
+    every field the API returned, no code change needed.
+    """
+    parser.add_argument(
+        "--raw",
+        action="store_true",
+        help="输出 API 返回的完整原始 JSON（不做字段精选，便于下游/AI 消费）。",
+    )
+
+
+def emit_raw(data: Any) -> None:
+    """Pretty-print the full API payload as JSON to stdout (pipe-clean)."""
+    json.dump(data, sys.stdout, ensure_ascii=False, indent=2)
+    sys.stdout.write("\n")

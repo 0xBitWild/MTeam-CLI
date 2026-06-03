@@ -9,7 +9,7 @@ from typing import Any
 from mteam_cli.api import MTeamAPIError, get_profile
 from mteam_cli.api import humanize as hz
 from mteam_cli.cli._account import add_account_arg, require_query, resolve_account_or_exit
-from mteam_cli.cli._emit import Field, add_format_arg, emit_record
+from mteam_cli.cli._emit import Field, add_format_arg, add_raw_arg, emit_raw, emit_record
 from mteam_cli.core.config import Settings
 
 _FIELDS = [
@@ -32,6 +32,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     p.add_argument("--uid", default=None, help="查看指定用户的 profile（默认：自己）。")
     add_account_arg(p)
     add_format_arg(p)
+    add_raw_arg(p)
     p.set_defaults(func=handle)
 
 
@@ -48,6 +49,10 @@ async def handle(
     if not data:
         print("未获取到 profile 数据。")
         return 1
+
+    if args.raw:
+        emit_raw(data)
+        return 0
 
     record = _shape(data)
     emit_record(record, _FIELDS, fmt=args.output_format)

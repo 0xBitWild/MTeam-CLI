@@ -9,7 +9,7 @@ from typing import Any
 from mteam_cli.api import MTeamAPIError, gen_dl_token, get_torrent_detail
 from mteam_cli.api import humanize as hz
 from mteam_cli.cli._account import add_account_arg, require_query, resolve_account_or_exit
-from mteam_cli.cli._emit import Field, add_format_arg, emit_record
+from mteam_cli.cli._emit import Field, add_format_arg, add_raw_arg, emit_raw, emit_record
 from mteam_cli.core.config import Settings
 
 _FIELDS = [
@@ -40,6 +40,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     )
     add_account_arg(p)
     add_format_arg(p)
+    add_raw_arg(p)
     p.set_defaults(func=handle)
 
 
@@ -58,6 +59,10 @@ async def handle(
     if not data:
         print(f"未找到种子 {args.id}。")
         return 1
+
+    if args.raw:
+        emit_raw(data)
+        return 0
 
     record = _shape(data)
 
