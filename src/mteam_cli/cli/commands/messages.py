@@ -19,7 +19,7 @@ from mteam_cli.core.config import Settings
 
 def register(subparsers: argparse._SubParsersAction) -> None:
     p = subparsers.add_parser(
-        "messages", help="站内信（收件箱）。需先 login 获取会话（API key 不支持）。"
+        "messages", help="站内信（收件箱）。注意：M-Team 对该端点启用请求签名，CLI 不支持（网页端专用）。"
     )
     p.add_argument("-n", "--limit", type=int, default=20, help="每页数量 (默认: 20)")
     p.add_argument("--page", type=int, default=1, help="页码 (默认: 1)")

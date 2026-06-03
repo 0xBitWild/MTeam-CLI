@@ -19,7 +19,7 @@ from mteam_cli.core.config import Settings
 
 def register(subparsers: argparse._SubParsersAction) -> None:
     p = subparsers.add_parser(
-        "hnr", help="H&R（Hit and Run）记录。需先 login 获取会话（API key 不支持）。"
+        "hnr", help="H&R（Hit and Run）记录。注意：M-Team 对该端点启用请求签名，CLI 不支持（网页端专用）。"
     )
     p.add_argument("--uid", default=None, help="查看指定用户（默认：自己）。")
     add_account_arg(p)

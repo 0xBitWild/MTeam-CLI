@@ -20,6 +20,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
+import time
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -30,6 +32,9 @@ MTEAM_UA = (
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/131.0.0.0 Safari/537.36"
 )
+# Session (JWT) endpoints check a client version header; without it the API
+# returns "網頁端版本過低". Overridable as the SPA bumps it.
+MTEAM_WEB_VERSION = os.getenv("MTEAM_WEB_VERSION", "1140")
 
 _SUCCESS_CODES = {"0", "200"}
 _AUTH_CODES = {"401", "403"}
@@ -95,7 +100,11 @@ async def api_post(
         "Accept": "application/json",
     }
     if auth_token:
+        # Mimic the SPA's session request headers (the API key path needs none
+        # of these, but session endpoints check webversion + identity headers).
         headers["authorization"] = auth_token
+        headers["webversion"] = MTEAM_WEB_VERSION
+        headers["ts"] = str(int(time.time()))
         if did:
             headers["did"] = did
         if visitorid:
@@ -147,6 +156,14 @@ def _unwrap(payload: Any, path: str) -> Any:
 
     if code_str in _SUCCESS_CODES:
         return payload.get("data")
+
+    # Signature-protected endpoint: the SPA computes a client-side request
+    # signature (_sgin) we deliberately don't replicate (anti-automation,
+    # brittle). Surface a clear, honest message instead of a bare "簽名錯誤".
+    if "簽名" in message or "签名" in message:
+        raise MTeamAPIError(
+            f"该端点启用了请求签名（_sgin）防自动化，CLI 不支持，请用网页端查看 [{path}]"
+        )
 
     # Non-success: classify auth/permission vs generic.
     msg_lower = message.lower()
