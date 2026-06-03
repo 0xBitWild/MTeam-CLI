@@ -212,7 +212,7 @@ async def _handle_2fa(
 
 def _parse_profile(profile: dict[str, Any], account: Account) -> str:
     """Format the intercepted profile into a notification body (legacy parity)."""
-    import humanize
+    from mteam_cli.api import humanize as hz
 
     data: dict[str, Any] | None = profile.get("data") if profile else None
     if not data:
@@ -236,13 +236,11 @@ def _parse_profile(profile: dict[str, Any], account: Account) -> str:
 
     count = data.get("memberCount")
     if count:
-        uploaded = humanize.naturalsize(count.get("uploaded", 0), binary=True)
-        downloaded = humanize.naturalsize(count.get("downloaded", 0), binary=True)
         lines += [
-            f"上传量: {uploaded}",
-            f"下载量: {downloaded}",
-            f"魔力值: {count.get('bonus')}",
-            f"分享率: {count.get('shareRate')}",
+            f"上传量: {hz.naturalsize(count.get('uploaded'))}",
+            f"下载量: {hz.naturalsize(count.get('downloaded'))}",
+            f"魔力值: {hz.num(count.get('bonus'))}",
+            f"分享率: {hz.ratio(count.get('shareRate'))}",
         ]
 
     return "\n".join(lines)

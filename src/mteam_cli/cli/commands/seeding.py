@@ -11,11 +11,12 @@ import argparse
 import logging
 from typing import Any
 
-from mteam_cli.api import MTeamAPIError, get_own_uid, get_peer_list
+from mteam_cli.api import get_own_uid, get_peer_list
 from mteam_cli.api import humanize as hz
 from mteam_cli.api.public import as_list
 from mteam_cli.cli._account import add_account_arg, require_query, resolve_account_or_exit
-from mteam_cli.cli._emit import Field, add_format_arg, add_raw_arg, emit_raw, notice, emit_rows
+from mteam_cli.cli._emit import Field, add_format_arg, add_raw_arg, emit_rows, notice
+from mteam_cli.cli._query import fetch, maybe_raw, run
 from mteam_cli.core.config import Settings
 
 _FIELDS = [
@@ -44,12 +45,20 @@ def register(subparsers: argparse._SubParsersAction) -> None:
 async def handle(
     args: argparse.Namespace, settings: Settings, logger: logging.Logger
 ) -> int:
+    return await run(_run(args, settings))
+
+
+async def _run(args: argparse.Namespace, settings: Settings) -> int:
     account = resolve_account_or_exit(args, settings)
     require_query(account)
     base = settings.api_base_url
-    try:
-        uid = args.uid or await get_own_uid(account.api_key, base_url=base)
-        data = await get_peer_list(
+
+    # getUserTorrentList requires a userid (probe-confirmed: 參數錯誤 without
+    # it), so the default path costs one extra profile fetch to learn our own
+    # uid. Pass --uid to skip it.
+    uid = args.uid or await fetch(get_own_uid(account.api_key, base_url=base))
+    data = await fetch(
+        get_peer_list(
             account.api_key,
             uid,
             base_url=base,
@@ -57,12 +66,8 @@ async def handle(
             page_number=args.page,
             page_size=args.limit,
         )
-    except MTeamAPIError as exc:
-        notice(f"错误: {exc}")
-        return 1
-
-    if args.raw:
-        emit_raw(data)
+    )
+    if maybe_raw(args, data):
         return 0
 
     rows = [_shape(it) for it in as_list(data)]

@@ -148,6 +148,17 @@ def auto_fields(rows: list[dict[str, Any]], max_cols: int = 8) -> list[Field]:
     return [Field(k, k) for k in seen[:max_cols]]
 
 
+def has_nested_values(rows: list[dict[str, Any]]) -> bool:
+    """True if any row has a dict/list value (renders as ugly repr in a table).
+
+    Lets auto_fields-based commands warn the user to use ``--raw`` for a usable
+    view, instead of silently emitting ``{'id': 1, ...}`` repr cells.
+    """
+    return any(
+        isinstance(v, (dict, list)) for r in rows for v in r.values()
+    )
+
+
 def add_format_arg(parser: Any) -> None:
     """Inject ``-f/--format`` onto a subparser. Single source of truth."""
     parser.add_argument(

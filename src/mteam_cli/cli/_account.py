@@ -42,3 +42,24 @@ def require_keepalive(account: Account) -> None:
             f"账户 {account.username!r} 缺少保活所需凭证"
             f"（需要 MTEAM_USERNAME/PASSWORD/TOTP_SECRET_<n>）。"
         )
+
+
+def resolve_session_or_exit(account: Account, settings: Settings):
+    """Load the web-session JWT for ``account``, or raise QueryExit(1).
+
+    Used by the session-only data commands (``hnr``/``messages``) that the API
+    key can't reach. Returns a ``WebSession``. Writes a stderr hint and unwinds
+    via ``QueryExit`` when no snapshot exists yet.
+    """
+    from mteam_cli.api import load_session
+    from mteam_cli.cli._emit import notice
+    from mteam_cli.cli._query import QueryExit
+
+    session = load_session(account.storage_path(settings.auth_dir))
+    if session is None:
+        notice(
+            f"该端点需要登录会话。请先运行 `mteam-cli login --account {account.username}`，"
+            "再执行本命令。"
+        )
+        raise QueryExit(1)
+    return session

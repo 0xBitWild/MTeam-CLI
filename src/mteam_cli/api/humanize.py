@@ -6,9 +6,16 @@ import humanize as _humanize
 
 
 def naturalsize(value: object) -> str:
-    """Human-readable binary size (MiB/GiB), matching the legacy script."""
+    """Human-readable binary size (MiB/GiB), matching the legacy script.
+
+    Coerces via ``float`` first so a byte count that arrives as a float- or
+    scientific-notation string (e.g. ``"12345.0"`` / ``"1.5e10"``) still
+    formats instead of falling through to an unscaled raw string.
+    """
+    if value in (None, ""):
+        return _humanize.naturalsize(0, binary=True)
     try:
-        return _humanize.naturalsize(int(value or 0), binary=True)
+        return _humanize.naturalsize(int(float(value)), binary=True)
     except (TypeError, ValueError):
         return str(value)
 

@@ -10,10 +10,22 @@ from __future__ import annotations
 import argparse
 import logging
 
-from mteam_cli.api import MTeamAPIError, get_hnr, load_session
+from mteam_cli.api import get_hnr
 from mteam_cli.api.public import as_list
-from mteam_cli.cli._account import add_account_arg, resolve_account_or_exit
-from mteam_cli.cli._emit import add_format_arg, add_raw_arg, auto_fields, emit_raw, notice, emit_rows
+from mteam_cli.cli._account import (
+    add_account_arg,
+    resolve_account_or_exit,
+    resolve_session_or_exit,
+)
+from mteam_cli.cli._emit import (
+    add_format_arg,
+    add_raw_arg,
+    auto_fields,
+    emit_rows,
+    has_nested_values,
+    notice,
+)
+from mteam_cli.cli._query import fetch, maybe_raw, run
 from mteam_cli.core.config import Settings
 
 
@@ -31,39 +43,35 @@ def register(subparsers: argparse._SubParsersAction) -> None:
 async def handle(
     args: argparse.Namespace, settings: Settings, logger: logging.Logger
 ) -> int:
+    return await run(_run(args, settings))
+
+
+async def _run(args: argparse.Namespace, settings: Settings) -> int:
     account = resolve_account_or_exit(args, settings)
-    session = load_session(account.storage_path(settings.auth_dir))
-    if session is None:
-        notice(
-            f"该端点需要登录会话。请先运行 `mteam-cli login --account {account.username}`，"
-            "再执行本命令。"
-        )
-        return 1
+    session = resolve_session_or_exit(account, settings)
 
     uid = args.uid or session.uid
     if not uid:
         notice("无法确定 uid（会话未携带，且未指定 --uid）。")
         return 1
 
-    try:
-        data = await get_hnr(
+    data = await fetch(
+        get_hnr(
             uid,
             base_url=settings.api_base_url,
             auth_token=session.auth_token,
             did=session.did,
             visitorid=session.visitorid,
         )
-    except MTeamAPIError as exc:
-        notice(f"错误: {exc}")
-        return 1
-
-    if args.raw:
-        emit_raw(data)
+    )
+    if maybe_raw(args, data):
         return 0
 
     rows = as_list(data)
     if not rows:
         notice("无 H&R 记录。")
         return 0
+    if args.output_format in ("table", "md") and has_nested_values(rows):
+        notice("提示：响应含嵌套字段，表格可能不易读，建议加 --raw 查看完整 JSON。")
     emit_rows(rows, auto_fields(rows), fmt=args.output_format)
     return 0

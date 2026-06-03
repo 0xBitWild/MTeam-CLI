@@ -9,7 +9,8 @@ from typing import Any
 from mteam_cli.api import MTeamAPIError, gen_dl_token, get_torrent_detail
 from mteam_cli.api import humanize as hz
 from mteam_cli.cli._account import add_account_arg, require_query, resolve_account_or_exit
-from mteam_cli.cli._emit import Field, add_format_arg, add_raw_arg, emit_raw, notice, emit_record
+from mteam_cli.cli._emit import Field, add_format_arg, add_raw_arg, emit_record, notice
+from mteam_cli.cli._query import fetch, maybe_raw, run
 from mteam_cli.core.config import Settings
 
 _FIELDS = [
@@ -47,21 +48,22 @@ def register(subparsers: argparse._SubParsersAction) -> None:
 async def handle(
     args: argparse.Namespace, settings: Settings, logger: logging.Logger
 ) -> int:
+    return await run(_run(args, settings, logger))
+
+
+async def _run(
+    args: argparse.Namespace, settings: Settings, logger: logging.Logger
+) -> int:
     account = resolve_account_or_exit(args, settings)
     require_query(account)
-    try:
-        data = await get_torrent_detail(
-            account.api_key, args.id, base_url=settings.api_base_url
-        )
-    except MTeamAPIError as exc:
-        notice(f"错误: {exc}")
-        return 1
+
+    data = await fetch(
+        get_torrent_detail(account.api_key, args.id, base_url=settings.api_base_url)
+    )
     if not data:
         notice(f"未找到种子 {args.id}。")
         return 1
-
-    if args.raw:
-        emit_raw(data)
+    if maybe_raw(args, data):
         return 0
 
     record = _shape(data)
