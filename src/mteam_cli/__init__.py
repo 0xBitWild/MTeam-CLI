@@ -1,3 +1,3 @@
 """M-Team CLI — keep-alive automation + AI-friendly data queries."""
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
