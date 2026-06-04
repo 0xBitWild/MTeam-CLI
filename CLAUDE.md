@@ -48,7 +48,7 @@ mteam-cli notices [-n N]
 
 Per account `_i`:
 - Credentials (independent sets): `MTEAM_USERNAME_i` + `MTEAM_PASSWORD_i` + `MTEAM_TOTP_SECRET_i` → `can_keepalive`; `MTEAM_API_KEY_i` → `can_query`.
-- **Notify, also per-account** (each channel opts in on its own vars): `NOTIFY_TELEGRAM_TOKEN_i`+`NOTIFY_TELEGRAM_CHAT_ID_i`, `NOTIFY_FEISHU_TOKEN_i`, `NOTIFY_SMTP_HOST_i`/`_PORT_i`/`_USER_i`/`_PASSWORD_i`/`_FROM_i`/`_TO_i`/`_USE_TLS_i` (`NOTIFY_EMAIL_i` is accepted as an alias for `NOTIFY_SMTP_TO_i`). Exposed as `Account.has_telegram` / `has_smtp` / `has_feishu`.
+- **Notify, also per-account** (each channel opts in on its own vars): `NOTIFY_TELEGRAM_TOKEN_i`+`NOTIFY_TELEGRAM_CHAT_ID_i`, `NOTIFY_FEISHU_TOKEN_i`, `NOTIFY_SMTP_TO_i` (`NOTIFY_EMAIL_i` is accepted as an alias for `NOTIFY_SMTP_TO_i`). SMTP *server* is global (`NOTIFY_SMTP_HOST`/`_PORT`/`_USER`/`_PASSWORD`/`_FROM`/`_USE_TLS`, no suffix). Exposed as `Account.has_telegram` / `has_smtp` / `has_feishu`.
 
 An api-key-only account is valid (data-only); a password+totp-only account is valid (keep-alive-only). The parser stops at the first index with neither username nor api_key. Commands call `require_keepalive` / `require_query` and exit clearly when the needed credential is missing.
 
@@ -104,6 +104,7 @@ Verified against M-Team's OpenAPI spec (`https://test2.m-team.cc/api/swagger-ui/
 - **Data ≠ keep-alive identity.** Data commands use `api_key`; keep-alive uses browser session. Don't entangle the two transports.
 - **M-Team API shapes are probe-verified.** When an endpoint differs from `api/public.py`'s current assumption (path/method/body/`code`/fields), fix it there — never spread the assumption into command modules. Re-probe by capturing the SPA's real XHR (DevTools / `page.route`).
 - **localStorage, not storage_state**, is the auth persistence format for M-Team.
+- **NOTIFY_SMTP_FROM must be a bare email address** (e.g. `user@foxmail.com`), NOT `DisplayName <addr>`. The code wraps it into `"MTeam-CLI <{sender}>"` for the From header; if sender already contains a display name, the double-wrapped result (e.g. `MTeam-CLI <MTeam-CLI<addr>>`) is syntactically invalid. smtplib can't extract a clean envelope address, and QQ/Foxmail SMTP returns `502 Invalid paramenters`. This was discovered the hard way: the dev-machine `.env` had a bare address (works); the k8s StatefulSet had a display-name value (502). The symptom on a dev machine with a working config is invisible — test in the real deployment environment.
 
 ## Deployment
 

@@ -1,9 +1,13 @@
 """SMTP email notifier — stdlib smtplib + MIMEText.
 
-Matches the legacy MT-AutoCheckIn script's proven SMTP pattern (the same code
-has been sending through QQ/Foxmail SMTP for years without content-filter
-rejections). ``EmailMessage.set_content()`` was tried — it triggered QQ 550 —
-so this sticks with ``MIMEText`` and plain-string headers.
+From header is ``"MTeam-CLI <{sender}>"`` — sender is expected to be a plain
+email address (e.g. ``user@foxmail.com``). If sender already carries a display
+name, the double-wrapping produces a syntactically invalid header that smtplib
+can't parse into a clean envelope address, and QQ/Foxmail SMTP returns
+``502 Invalid paramenters``. Keep NOTIFY_SMTP_FROM as a bare address.
+
+This is the legacy script's proven pattern — MIMEText with a single-layer
+display-name From header. It has worked with QQ/Foxmail SMTP for years.
 """
 
 from __future__ import annotations
