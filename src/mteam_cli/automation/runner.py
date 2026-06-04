@@ -47,7 +47,7 @@ async def run_one_account_tick(
         Notification(
             event=event,
             title=title,
-            body=_notify_body(result),
+            body=result.profile_text if result.ok else (result.error or "登录失败"),
         )
     )
     return result
@@ -81,18 +81,3 @@ async def run_all_accounts(
             logger.exception("[%s] tick 异常，继续下一个账户", acct.username)
             worst = CHECKIN_FAILED_EXIT_CODE
     return worst
-
-
-def _notify_body(result: CheckinResult) -> str:
-    """Short notification body (email-safe — QQ's content filter rejects
-    full profile dumps). The detailed profile is in the log file."""
-    if result.ok:
-        body = f"{result.username} 保活签到成功。"
-        if result.profile_text:
-            # pull out only the last-login/browse lines (least triggering)
-            for line in result.profile_text.splitlines():
-                line = line.strip()
-                if "登录时间" in line or "浏览时间" in line:
-                    body += f"\n{line}"
-        return body
-    return result.error or "登录失败"

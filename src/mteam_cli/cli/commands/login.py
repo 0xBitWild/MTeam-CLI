@@ -6,7 +6,6 @@ import argparse
 import logging
 
 from mteam_cli.automation.login import perform_login
-from mteam_cli.automation.runner import _notify_body
 from mteam_cli.cli._account import add_account_arg, require_keepalive, resolve_account_or_exit
 from mteam_cli.cli._browser import browser_session_ctx
 from mteam_cli.core.config import Settings
@@ -35,7 +34,7 @@ async def handle(
         Notification(
             event=event,
             title=title,
-            body=_notify_body(result),
+            body=result.profile_text if result.ok else result.error,
         )
     )
 
