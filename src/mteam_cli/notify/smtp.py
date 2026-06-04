@@ -1,9 +1,9 @@
-"""SMTP email notifier — stdlib smtplib + email.message.EmailMessage.
+"""SMTP email notifier — stdlib smtplib + MIMEText.
 
-Follows the Weread-CLI pattern (proven working with QQ SMTP): modern
-``EmailMessage`` + ``set_content()`` for clean UTF-8 encoding; bare sender
-address on the envelope so QQ's strict auth check passes. Recipients are
-fixed at construction time (per-account).
+Matches the legacy MT-AutoCheckIn script's proven SMTP pattern (the same code
+has been sending through QQ/Foxmail SMTP for years without content-filter
+rejections). ``EmailMessage.set_content()`` was tried — it triggered QQ 550 —
+so this sticks with ``MIMEText`` and plain-string headers.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import asyncio
 import logging
 import smtplib
 from dataclasses import dataclass, field
-from email.message import EmailMessage
+from email.mime.text import MIMEText
 
 from mteam_cli.notify.base import Notification
 
@@ -38,11 +38,10 @@ class SMTPNotifier:
         await asyncio.to_thread(self._sync_send, n)
 
     def _sync_send(self, n: Notification) -> None:
-        msg = EmailMessage()
+        msg = MIMEText(n.body)
         msg["Subject"] = n.title
-        msg["From"] = self.sender
+        msg["From"] = f"MTeam-CLI <{self.sender}>"
         msg["To"] = ", ".join(self.recipients)
-        msg.set_content(n.body)
 
         client_cls = smtplib.SMTP_SSL if self.port == 465 else smtplib.SMTP
         with client_cls(self.host, self.port, timeout=self.timeout_seconds) as client:
